@@ -223,6 +223,7 @@ maxlat, maxlon = max(hurrlat), max(hurrlon)
 
 hycom_url = find_hycom_dir(hours)
 locations = zip(hurrlat,hurrlon,hours)
+#locations = locations[-12:]
 
 print hycom_url
 data = netCDF4.Dataset(hycom_url)
@@ -233,9 +234,8 @@ xyz = [point if isinstance(point[2],np.float32) else (point[0], point[1], -1) fo
 
 # This is just some reformatting for plotting... fingers crossed
 
-hrs = [ymdh(point[0]) for point in xyz]
-
-x = [point[0] for point in xyz]
+import datetime
+x = [datetime.datetime.strptime(ymdh(point[0]), '%Y%m%d%H') for point in xyz]
 y = [-1*point[1] for point in xyz]
 z = [point[2] for point in xyz]
 
@@ -249,22 +249,34 @@ z = [point[2] for point in xyz]
 ################################################################################
 
 from mpl_toolkits.basemap import Basemap, cm
-import matplotlib.dates as mdates
+from matplotlib import dates as mdates
 import cmocean
+
+xx = mdates.date2num(x)
+hfmt = mdates.DateFormatter('%d %b %I %p')
 
 fig = plt.figure()
 
 ax = fig.add_subplot(311) #plt.subplots(1,2, sharex=True, sharey=True)
 ax.set_title("Temperature Profile")
 #plt.xlabel('Date')
-plt.fmt_xdata = mdates.DateFormatter('%Y%m%d%H') # x-axis label
+ # x-axis label
+#plt.xaxis.set_major_locator(weeks)
+#plt.xaxis.set_major_formatter(monthsFmt)
+#plt.xaxis.set_minor_locator(days)
 plt.ylabel('Depth (m)') # y-axis label
-plt.tricontour(x, y, z, 20, linewidths=0.5, colors='k')
-plt.tricontourf(x,y,z, 20, cmap = cmocean.cm.thermal) 
-plt.scatter(x,y, edgecolors='none', c=z, cmap = cmocean.cm.thermal)
+plt.tricontour(xx, y, z, 20, linewidths=0.5, colors='k')
+plt.tricontourf(xx,y,z, 20, cmap = cmocean.cm.thermal) 
+plt.scatter(xx,y, edgecolors='none', c=z, cmap = cmocean.cm.thermal)
+plt.axis([min(xx), max(xx), min(y), max(y)])
+plt.xticks(rotation=45)
+ax = plt.gca()
+ax.xaxis.set_major_formatter(hfmt)
+rotation=70
 plt.clim(5,31)
-plt.axis([min(x), max(x), min(y), max(y)])
 plt.colorbar()
+
+
 
 
 ax = fig.add_subplot(313)
@@ -276,7 +288,9 @@ m.drawcoastlines()
 m.plot(hurrlon,hurrlat,color='blue')
 #m.scatter(hurrlon[start:],hurrlat[start:],color='red')
 m.scatter(hurrlon,hurrlat,color='red')
-#fig.tight_layout()
+
+
+#plt.tight_layout()
 
 plt.savefig('fig_test.png')
 plt.show()
