@@ -277,15 +277,10 @@ m.plot(hurrlon,hurrlat,color='blue')
 #m.scatter(hurrlon[start:],hurrlat[start:],color='red')
 m.scatter(hurrlon,hurrlat,color='red')
 
+plt.tight_layout()
 plt.savefig('fig_test.png')
 plt.show()
 
-
-"""
-deptim = izip(d_list,t_list,T_list)
-for dt in deptim:
-    plt.scatter(dt[1], dt[0])
-plt.show()"""
 
 
 
