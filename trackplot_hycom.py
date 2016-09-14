@@ -230,7 +230,7 @@ data = netCDF4.Dataset(hycom_url)
 xyz = zip_variable3D(locations, data, variable, hycom_url)
 
 # clean up for numpy the Hycom formatting choices
-xyz = [point if isinstance(point[2],np.float32) else (point[0], point[1], -1) for point in xyz]
+xyz = [point if isinstance(point[2],np.float32) else (point[0], point[1], np.nan) for point in xyz]
 
 # This is just some reformatting for plotting... fingers crossed
 
@@ -258,15 +258,10 @@ hfmt = mdates.DateFormatter('%d %b %I %p')
 fig = plt.figure()
 
 ax = fig.add_subplot(311) #plt.subplots(1,2, sharex=True, sharey=True)
-ax.set_title("Temperature Profile")
-#plt.xlabel('Date')
- # x-axis label
-#plt.xaxis.set_major_locator(weeks)
-#plt.xaxis.set_major_formatter(monthsFmt)
-#plt.xaxis.set_minor_locator(days)
+ax.set_title("HYCOM Temperature Profile")
 plt.ylabel('Depth (m)') # y-axis label
-plt.tricontour(xx, y, z, 20, linewidths=0.5, colors='k')
-plt.tricontourf(xx,y,z, 20, cmap = cmocean.cm.thermal) 
+#plt.tricontour(xx, y, z, 20, linewidths=0.5, colors='k')
+#plt.tricontourf(xx,y,z, 20, cmap = cmocean.cm.thermal) 
 plt.scatter(xx,y, edgecolors='none', c=z, cmap = cmocean.cm.thermal)
 plt.axis([min(xx), max(xx), min(y), max(y)])
 plt.xticks(rotation=45)
