@@ -25,6 +25,17 @@ import matplotlib.pyplot as plt
 from itertools import izip
 import sys
 
+def IDW_interp(variablearray, distancearray):
+    import numpy as np
+    if variablearray.shape == distancearray.shape:
+        w = np.array([1.0/(x**2) for x in distancearray])
+        w = w*(1./np.nansum(w))
+        wvar = w*variablearray
+        return np.nansum(wvar)
+    else:
+        print "The variable and distance arrays did not match, returned variable array"
+        return variablearray
+
 def offset_hour_2000(y,m,d,h):
     """Returns year,month,day string for an offset day"""
     from datetime import datetime, timedelta
@@ -74,7 +85,7 @@ def location_to_index(target_lat,target_lon,lats,lons):
                 found_lon = lon
     return (y,x,found_lat,found_lon)
 
-def interpSlice_nc4(loc, date_index, variable, data):
+def IDW_Slice_nc4(loc, date_index, variable, data):
     """ Returns weighted average of temperature at a given location
         interp(target ,neighborhood, depth_index, variable, date_index)
         date_index from date in hours since 2000/1/1
@@ -83,6 +94,7 @@ def interpSlice_nc4(loc, date_index, variable, data):
     """
     import netCDF4
     import numpy as np
+    from sklearn.preprocessing import normalize
     lons = data.variables['lon'][:]
     lats = data.variables['lat'][:]
     depth= data.variables['depth'][:]
@@ -91,13 +103,15 @@ def interpSlice_nc4(loc, date_index, variable, data):
     neighborlist = nearest_neighbors(y,x)
     neighborhood = [ [lats[i[0]], lons[i[1]]] for i in neighborlist]
     dist_list = [vincenty(loc,neighbor) for neighbor in neighborhood]
-    weight_list = np.array([1./(dist*dist) if dist > 0 else 1.0 for dist in dist_list])
+    #weight_list = np.array([1./(dist*dist) if dist > 0 else 1.0 for dist in dist_list])
+    #weight_list = weight_list / np.linalg.norm(weight_list)
     var_matrix = []
     for neighbor in neighborlist:
     	tmp = data.variables[variable][date_index, :, neighbor[0], neighbor[1]]
         var_matrix.append(np.squeeze(tmp))
     var_matrix = np.asarray(var_matrix)
-    var_list = [np.average(var_matrix[:,i], weights=weight_list) for i,j in enumerate(depth)]
+    var_list = [IDW_interp(np.array(var_matrix[:,i]),np.array(dist_list)) for i,j in enumerate(depth)]
+    #print var_list[0]
     return var_list
 
 def tempcolumn_nc4(loc, date_index, variable, data):
@@ -129,7 +143,8 @@ def hycomScrubber(hycom_url,variable,location,date_index):
     from netCDF4 import Dataset
     data = Dataset(hycom_url)
     depth = data.variables['depth'][:]
-    temps = tempcolumn_nc4(location, date_index, variable, data)
+    #temps = tempcolumn_nc4(location, date_index, variable, data)
+    temps = IDW_Slice_nc4(location, date_index, variable, data)
     return temps[:25], depth[:25]
 
 def hurrtimeconv(date):
@@ -223,14 +238,14 @@ maxlat, maxlon = max(hurrlat), max(hurrlon)
 
 hycom_url = find_hycom_dir(hours)
 locations = zip(hurrlat,hurrlon,hours)
-#locations = locations[-12:]
+#locations = locations[-30:]
 
 print hycom_url
 data = netCDF4.Dataset(hycom_url)
 xyz = zip_variable3D(locations, data, variable, hycom_url)
 
 # clean up for numpy the Hycom formatting choices
-xyz = [point if isinstance(point[2],np.float32) else (point[0], point[1], np.nan) for point in xyz]
+xyz = [point if isinstance(point[2],np.float64) else (point[0], point[1], np.nan) for point in xyz]
 
 # This is just some reformatting for plotting... fingers crossed
 
